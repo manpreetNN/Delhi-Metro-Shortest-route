@@ -81,12 +81,12 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
+
 if __name__ == "__main__":
-    url = "http://127.0.0.1:8080"
-    print(f"Server running at {url} (Press Ctrl+C to stop)")
+    port = int(os.environ.get("PORT", 8080))
     HTTPServer.allow_reuse_address = True
-    server = HTTPServer(("127.0.0.1", 8080), Handler)
-    webbrowser.open(url)
+    server = HTTPServer(("0.0.0.0", port), Handler)
+    print(f"Server running on port {port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
