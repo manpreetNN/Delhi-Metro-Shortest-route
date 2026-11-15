@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DELHI METRO ROUTE OPTIMIZER</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f1f5f9;
+            color: #080808;
+            max-width: 780px;
+            margin: 24px auto;
+            padding: 0 16px;
+            transition: background 0.2s, color 0.2s;
+        }
+        body.dark { background: #0b0b0c; color: #f8fafc; }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .top-bar h2 { margin: 0; font-size: 1.4rem; }
+
+        .panel {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+        body.dark .panel { background: #1e293b; border-color: #334155; }
+
+        .input-row { display: flex; gap: 8px; margin-top: 6px; margin-bottom: 14px; }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px 12px;
+            font-size: 15px;
+            border: 1px solid #94a3b8;
+            border-radius: 6px;
+            background: #f8fafc;
+            color: #0f172a;
+        }
+        body.dark input[type="text"] { background: #0f172a; color: #f8fafc; border-color: #475569; }
+
+        button {
+            padding: 9px 14px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #e2e8f0;
+            color: #0f172a;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background: #cbd5e1; }
+        body.dark button { background: #334155; color: #f8fafc; border-color: #475569; }
+        body.dark button:hover { background: #475569; }
+
+        .primary-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            margin-top: 12px;
+        }
+        .primary-btn:hover { background: #1d4ed8; }
+
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .demo-bar { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 13px; }
+        body.dark .demo-bar { border-color: #334155; }
+        .demo-bar button { font-size: 12px; padding: 6px 10px; margin: 4px 4px 0 0; }
+
+        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
+        .card { background: #1e293b; color: #ffffff; padding: 14px 10px; border-radius: 8px; text-align: center; }
+        body.dark .card { background: #020617; border: 1px solid #334155; }
+        .card small { display: block; color: #94a3b8; font-size: 11px; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .card b { font-size: 18px; }
+
+        .step {
+            padding: 9px 14px;
+            margin: 6px 0;
+            border-left: 6px solid #64748b;
+            background: #ffffff;
+            border-radius: 5px;
+            font-size: 14px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        body.dark .step { background: #1e293b; color: #e2e8f0; }
+
+        .interchange {
+            background: #fef3c7 !important;
+            border-left: 6px solid #f59e0b !important;
+            font-weight: bold;
+            color: #92400e !important;
+        }
+        body.dark .interchange { background: #451a03 !important; color: #fde68a !important; }
+
+        .yellow { border-left-color: #eab308; }
+        .blue { border-left-color: #2563eb; }
+        .red { border-left-color: #dc2626; }
+        .violet { border-left-color: #7c3aed; }
+        .green { border-left-color: #16a34a; }
+        .pink { border-left-color: #ec4899; }
+        .magenta { border-left-color: #be185d; }
+        .airport { border-left-color: #ea580c; }
+        .aqua { border-left-color: #0891b2; }
+        .rapid { border-left-color: #0284c7; }
+
+        /* Metro Map Panel & Zoom Styling */
+        .map-panel { margin-top: 20px; overflow-x: auto; }
+        .map-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .map-img {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #94a3b8;
+            cursor: zoom-in;
+            transition: width 0.25s ease;
+        }
+        .map-img.zoomed {
+            width: 165%;
+            max-width: none;
+            cursor: zoom-out;
+        }
+
+        @media (max-width: 600px) {
+            .cards { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <h2>Delhi Metro Route Optimizer</h2>
+        <div>
+            <button type="button" onclick="toggleMap()">🗺️ Hide/Show Map</button>
+            <button type="button" onclick="document.body.classList.toggle('dark')">🌓 Dark Mode</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <datalist id="stations-list"></datalist>
+
+        <label for="src"><strong>Source Station:</strong></label>
+        <div class="input-row">
+            <input type="text" id="src" list="stations-list" placeholder="Search source station (e.g. Samaypur Badli)...">
+            <button type="button" onclick="document.getElementById('src').value = ''">Clear</button>
+        </div>
+
+        <label for="dst"><strong>Destination Station:</strong></label>
+        <div class="input-row">
+            <input type="text" id="dst" list="stations-list" placeholder="Search destination station (e.g. Botanical Garden)...">
+            <button type="button" onclick="document.getElementById('dst').value = ''">Clear</button>
+        </div>
+
+        <div class="controls-bar">
+            <button type="button" onclick="swapStations()">⇄ Swap Stations</button>
+            <label style="cursor:pointer; font-size:14px;">
+                <input type="checkbox" id="smartcard" onchange="if (lastRouteData) renderRoute(lastRouteData)">
+                Apply Metro Smart Card (10% Off)
+            </label>
+        </div>
+
+        <button type="button" class="primary-btn" onclick="findRoute()">Find Shortest Route</button>
+
+        <div class="demo-bar">
+            <strong>Quick Demo Routes:</strong><br>
+            <button type="button" onclick="quickDemo('Samaypur Badli', 'Botanical Garden')">Yellow → Violet → Blue</button>
+            <button type="button" onclick="quickDemo('New Delhi', 'Airport (T3)')">Airport Express</button>
+            <button type="button" onclick="quickDemo('Hauz Khas', 'Rithala')">Yellow → Red</button>
+            <button type="button" onclick="quickDemo('Kashmere Gate', 'Rajiv Chowk')">Kashmere Gate → Rajiv Chowk</button>
+        </div>
+    </div>
+
+    <div id="stats" class="cards" style="display:none;"></div>
+    <div id="output"></div>
+
+    <!-- Delhi Metro Map Section -->
+    <div id="map-card" class="panel map-panel">
+        <div class="map-header">
+            <strong>Delhi Metro Network Map</strong>
+            <small style="color:#64748b;">(Click map to zoom in/out)</small>
+        </div>
+        <img src="/metro_map.png" alt="Delhi Metro Route Map" class="map-img" onclick="this.classList.toggle('zoomed')">
+    </div>
+
+    <script>
+        let allStations = [];
+        let lastRouteData = null;
+
+        fetch("/stations").then(r => r.json()).then(data => {
+            allStations = data.stations;
+            const list = document.getElementById("stations-list");
+            allStations.forEach(station => {
+                const option = document.createElement("option");
+                option.value = station;
+                list.appendChild(option);
+            });
+        });
+
+        function toggleMap() {
+            const card = document.getElementById("map-card");
+            card.style.display = (card.style.display === "none") ? "block" : "none";
+        }
+
+        function swapStations() {
+            const src = document.getElementById("src");
+            const dst = document.getElementById("dst");
+            [src.value, dst.value] = [dst.value, src.value];
+        }
+
+        function quickDemo(source, dest) {
+            document.getElementById("src").value = source;
+            document.getElementById("dst").value = dest;
+            findRoute();
+        }
+
+        ["src", "dst"].forEach(id => {
+            document.getElementById(id).addEventListener("keypress", e => {
+                if (e.key === "Enter") findRoute();
+            });
+        });
+
+        function renderRoute(data) {
+            lastRouteData = data;
+            const isSmartCard = document.getElementById("smartcard").checked;
+            const finalFare = isSmartCard ? Math.floor(data.fare * 0.9) : data.fare;
+
+            const stats = document.getElementById("stats");
+            stats.style.display = "grid";
+            stats.innerHTML = `
+                <div class="card"><small>EST. TIME</small><b>${data.time} mins</b></div>
+                <div class="card"><small>FARE ${isSmartCard ? "(CARD)" : ""}</small><b>₹${finalFare}</b></div>
+                <div class="card"><small>STATIONS (${data.distance} km)</small><b>${data.stops}</b></div>
+                <div class="card"><small>INTERCHANGES</small><b>${data.interchanges}</b></div>
+            `;
+
+            const lineColors = ["yellow", "blue", "red", "violet", "green", "pink", "magenta", "airport", "aqua", "rapid"];
+            const out = document.getElementById("output");
+            out.innerHTML = data.steps.map(step => {
+                const lower = step.toLowerCase();
+                if (lower.includes("interchange")) {
+                    return `<div class="step interchange">⇄ ${step}</div>`;
+                }
+                const color = lineColors.find(c => lower.includes(c)) || "";
+                return `<div class="step ${color}">${step}</div>`;
+            }).join("");
+        }
+
+        function findRoute() {
+            const rawSrc = document.getElementById("src").value.trim().toLowerCase();
+            const rawDst = document.getElementById("dst").value.trim().toLowerCase();
+
+            const src = allStations.find(s => s.toLowerCase() === rawSrc);
+            const dst = allStations.find(s => s.toLowerCase() === rawDst);
+
+            if (!src || !dst) {
+                return alert("Please select valid Source and Destination stations from the list.");
+            }
+            if (src === dst) {
+                return alert("Source and Destination stations cannot be the same.");
+            }
+
+            fetch(`/route?src=${encodeURIComponent(src)}&dst=${encodeURIComponent(dst)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) return alert(data.error);
+                    renderRoute(data);
+                });
+        }
+    </script>
+</body>
+</html>
